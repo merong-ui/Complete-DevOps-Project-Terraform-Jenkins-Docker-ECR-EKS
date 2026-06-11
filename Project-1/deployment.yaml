@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: python-application-deployment
+
+spec:
+  replicas: 2  # Creates two Pods for high availability.
+
+  selector:
+    matchLabels:
+      app: python-application
+
+  template:
+    metadata:
+      labels:
+        app: python-application
+
+    spec:
+      containers:
+      - name: python-application
+        # The Jenkins pipeline will push the built image here.
+        image: 217428065218.dkr.ecr.us-east-1.amazonaws.com/python-application:latest
+
+        ports:
+        - containerPort: 5000 #Port exposed by the application inside the container.
