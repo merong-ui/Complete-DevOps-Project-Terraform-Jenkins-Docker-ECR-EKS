@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: python-application-service
+
+spec:
+  type: LoadBalancer #Creates an AWS Elastic Load Balancer automatically.
+
+  selector:
+    app: python-application
+
+  ports:
+  - port: 80 #External port exposed to users.
+    targetPort: 5000 #Port on which the application listens inside the container.
