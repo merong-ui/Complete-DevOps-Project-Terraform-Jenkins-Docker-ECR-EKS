@@ -1,109 +1,60 @@
 pipeline {
-    agent any
-
-    //Git is checked out
-    stage('Checkout') {
-    steps {
-        git branch: 'main',
-            url: 'https://github.com/merong-ui/Complete_CICD_with_ECR_and_EKS.git'
-    }
-    }
+    agent any  // Run pipeline on any available Jenkins agent
 
     environment {
-        AWS_REGION = 'us-east-1'
-        EKS_CLUSTER = 'prod-cluster'
-        ECR_REGISTRY = 217428065218.dkr.ecr.us-east-1.amazonaws.com/python-application
+        REGION = "us-east-1"  
 
-        //Image versioning using Git commit SHA
-        // This ensures every build is traceable to exact source code
-        IMAGE_TAG = "${GIT_COMMIT}"
+        // Full ECR repo (used for tagging + pushing)
+        ECR = "217428065218.dkr.ecr.us-east-1.amazonaws.com/myapp"
+
+        // ECR registry only (used for login)
+        ECR_REGISTRY = "217428065218.dkr.ecr.us-east-1.amazonaws.com"
     }
 
-    stages{
-        stage('Build app'){
+    stages {
+
+        stage('Checkout Code') {
             steps {
-                script {
-                    echo "Building the application"
-                }
+                //Pull code from GitHub repository using SSH-based authentication (no tokens or passwords)
+                git branch: 'main',
+                    credentialsId: 'github-ssh',
+                    url: 'git@github.com:merong-ui/End-to-End-DevOps-Automation-Platform-on-AWS.git'
+             }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                // Build and tag image directly for ECR
+                sh "docker build -t $ECR:latest ."
             }
         }
 
-  stage('Build Docker Image') {
+        stage('Login to ECR') {
             steps {
-                script {
-
-                    // Build Docker image and tag with Git commit SHA
-                    echo "Building Docker image with tag: ${IMAGE_TAG}"
-
-                    sh """
-                    docker build -t $ECR_REGISTRY:$IMAGE_TAG .
-
-                    # Tag image for AWS ECR repository
-                    docker tag $ECR_REGISTRY:$IMAGE_TAG $ECR_REGISTRY:$IMAGE_TAG
-                    """
-                }
-            }
-        }
-        stage('Push to ECR') {
-            environment {
-                // Secure AWS credentials from Jenkins Credentials Manager
-                AWS_ACCESS_KEY_ID = credentials('jenkins_aws_access_key')
-                AWS_SECRET_ACCESS_KEY = credentials('jenkins_aws_secret_key')
-
-            }
-
-
-              steps {
-                script {
-
-                    // Login to AWS ECR and push Docker image
-                    echo "Pushing Docker image to ECR"
-
-                    sh """
-                    aws ecr get-login-password --region $AWS_REGION | \
-                    docker login --username AWS --password-stdin $ECR_REGISTRY
-
-                    docker push $ECR_REGISTRY:$IMAGE_TAG
-                    """
-                }
+                // Authenticate Docker to AWS ECR using IAM role (secure, no stored credentials)
+                sh '''
+                aws ecr get-login-password --region $REGION | \
+                docker login --username AWS --password-stdin $ECR_REGISTRY
+                '''
             }
         }
 
-         stage('Deploy to EKS') {
-
-            environment {
-
-                // AWS credentials injected securely from Jenkins
-                AWS_ACCESS_KEY_ID = credentials('aws-access-key')
-                AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
-            }
+        stage('Push Image to ECR') {
             steps {
-                script {
-                    // Starting deployment process
-                    echo "Deploying image ${IMAGE_TAG} to EKS cluster"
+                // Push image to ECR repository
+                sh "docker push $ECR:latest"
+            }
+        }
 
-                    sh '''
-
-                     # Generate kubeconfig file to connect Jenkins with EKS cluster
-                     aws eks update-kubeconfig \
-                        --region $AWS_REGION \
-                        --name $EKS_CLUSTER
-
-                    # Verify connection to Kubernetes cluster
-                    kubectl get nodes
-
-                    # Update running deployment with new image version
-                    kubectl set image deployment/myapp-deployment \
-                      myapp=$ECR_REGISTRY:$IMAGE_TAG
-
-                    # Wait for rollout to complete (ensures zero downtime deployment)
-                    kubectl rollout status deployment/myapp-deployment
-                   '''
-
-                }
+        stage('Deploy to EC2') {
+            steps {
+                // Replace old container with new version
+                sh '''
+                docker stop myapp || true
+                docker rm myapp || true
+                docker run -d -p 80:5000 --name myapp $ECR:latest
+                '''
             }
         }
     }
-
 }
-   
