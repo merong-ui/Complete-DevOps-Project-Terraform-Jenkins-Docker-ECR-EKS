@@ -1,11 +1,8 @@
 terraform {
-
   backend "s3" {
-
     bucket         = "company-terraform-state"
-    key            = "devops-project/terraform.tfstate"
+    key            = "devops/terraform.tfstate"
     region         = "us-east-1"
-    dynamodb_table = "terraform-locks"
-
+    use_lockfile   = true
   }
 }
