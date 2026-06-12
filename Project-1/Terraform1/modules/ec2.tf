@@ -13,3 +13,9 @@ resource "aws_instance" "jenkins" {
     Name = "jenkins-server"
   }
 }
+
+# Associate the Elastic IP with the Jenkins EC2 instance
+resource "aws_eip_association" "jenkins_eip_assoc" {
+  instance_id   = aws_instance.jenkins.id
+  allocation_id = aws_eip.jenkins_eip.id
+}

@@ -1,8 +1,9 @@
-# Elastic IP to keep a fixed public IP for Jenkins/webhook
+# Create an Elastic IP (EIP) for Jenkins
+# This EIP will be associated with the Jenkins EC2 instance to provide a static public IP address.
 resource "aws_eip" "jenkins_eip" {
-  instance = aws_instance.app_server.id  # Attach to EC2
+  domain = "vpc"
 
   tags = {
-    Name = "DevOps-EIP"
+    Name = "jenkins-eip"
   }
 }

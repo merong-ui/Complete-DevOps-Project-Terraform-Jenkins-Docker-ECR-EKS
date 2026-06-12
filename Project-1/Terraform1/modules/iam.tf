@@ -1,19 +1,18 @@
 # Create an IAM role for Jenkins to allow EC2 instances to assume it
 # This role will be attached to the EC2 instance profile for Jenkins, allowing it to interact with AWS services securely.
 resource "aws_iam_role" "jenkins_role" {
-  name = "jenkins-ec2-role"
-
+  name = "jenkins-role"
+  
+# The assume role policy allows EC2 instances to assume this role, granting them the permissions defined in the attached policies.
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        },
-        Action = "sts:AssumeRole"
+    Statement = [{
+      Action = "sts:AssumeRole",
+      Effect = "Allow",
+      Principal = {
+        Service = "ec2.amazonaws.com"
       }
-    ]
+    }]
   })
 }
 
