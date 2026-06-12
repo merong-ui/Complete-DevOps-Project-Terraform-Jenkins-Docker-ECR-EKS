@@ -43,13 +43,13 @@ pipeline {
         }
 
         stage('Push to ECR') {
-            
+
             environment {
                 AWS_ACCESS_KEY_ID = credentials('aws-access-key')
                 AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
             }
-            {
 
+            steps {
                 sh """
                 echo "Logging into ECR"
 
@@ -62,7 +62,7 @@ pipeline {
                 """
             }
         }
-    }
+    
         stage('Deploy to EKS') {
 
             environment {
@@ -93,6 +93,7 @@ pipeline {
         }
     }
 
+
 post {
         success {
             echo "Deployment SUCCESS"
@@ -101,3 +102,5 @@ post {
             echo "Deployment FAILED"
         }
     }
+}
+
