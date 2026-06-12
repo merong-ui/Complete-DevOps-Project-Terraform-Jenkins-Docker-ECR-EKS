@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 
 metadata:
-  name: python-application-deployment
+  name: myapp-deployment
 
 spec:
   replicas: 2  # Creates two Pods for high availability.
