@@ -3,6 +3,7 @@
 
 #terraform(tf) state files
 *.tfstate.*
+*.tfstate
 
 terraform.tfstate
 
@@ -14,3 +15,9 @@ crash.log
 
 # Terraform CLI binary
 terraform.exe
+
+# Terraform provider binaries
+terraform-provider-*
+
+# Terraform lock file
+!.terraform.lock.hcl
