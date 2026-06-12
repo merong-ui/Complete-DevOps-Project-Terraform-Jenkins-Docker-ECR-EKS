@@ -1,0 +1,15 @@
+# Create an EC2 instance for Jenkins
+resource "aws_instance" "jenkins" {
+
+  ami           = "ami-xxxxxxxx"
+  instance_type = "t3.medium"
+
+  iam_instance_profile = aws_iam_instance_profile.jenkins_profile.name
+
+  # User data script for initializing the Jenkins server that will install Docker, Jenkins, Dependencies, Configuration.
+  user_data = file("${path.module}/user_data.sh")
+
+  tags = {
+    Name = "jenkins-server"
+  }
+}
