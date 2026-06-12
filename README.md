@@ -182,8 +182,6 @@ Add the following credentials as **Secret Text**:
 Kind: Secret Text
 Description: AWS Access Key
 ```
-<img width="433" height="259" alt="Screenshot 2026-06-10 173852" src="https://github.com/user-attachments/assets/56ea7391-9cf8-4f19-b98c-01bd188d08e4" />
-
 
 ### AWS Secret Key
 
@@ -191,7 +189,7 @@ Description: AWS Access Key
 Kind: Secret Text
 Description: AWS Secret Access Key
 ```
-<img width="351" height="192" alt="Screenshot 2026-06-10 174023" src="https://github.com/user-attachments/assets/a62064c7-424a-4236-982b-6d4be385789c" />
+<img width="520" height="460" alt="image" src="https://github.com/user-attachments/assets/00983912-1464-481f-9099-7b4bc958f01f" />
 
 These credentials will be injected securely into the Jenkins pipeline during execution.
 
