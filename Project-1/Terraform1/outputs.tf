@@ -7,5 +7,5 @@ output "public_ip" {
 # Output EC2 instance ID
 output "instance_id" {
   description = "EC2 Instance ID"
-  value       = aws_instance.app_server.id
+  value       = aws_instance.jenkins.id
 }

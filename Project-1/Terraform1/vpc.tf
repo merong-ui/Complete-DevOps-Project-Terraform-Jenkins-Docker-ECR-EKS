@@ -59,10 +59,33 @@ resource "aws_eip" "nat" {
 }
 
 # Private Subnet (for backend, EKS nodes, etc.)
-resource "aws_subnet" "private" {
+
+resource "aws_subnet" "private_1a" {
   vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.2.0/24"
+  cidr_block        = "10.0.10.0/24"
   availability_zone = "us-east-1a"
+
+  tags = {
+    Name = "private-1a"
+
+    # REQUIRED for EKS
+    "kubernetes.io/cluster/devops-cluster" = "shared"
+    "kubernetes.io/role/internal-elb"      = "1"
+  }
+}
+
+resource "aws_subnet" "private_1b" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.11.0/24"
+  availability_zone = "us-east-1b"
+
+  tags = {
+    Name = "private-1b"
+
+    # REQUIRED for EKS
+    "kubernetes.io/cluster/devops-cluster" = "shared"
+    "kubernetes.io/role/internal-elb"      = "1"
+  }
 }
 
 # Route Table for Private Subnet
@@ -76,7 +99,12 @@ resource "aws_route_table" "private_rt" {
 }
 
 #Associate Private Subnet with NAT Route Table
-resource "aws_route_table_association" "private_assoc" {
-  subnet_id      = aws_subnet.private.id
+resource "aws_route_table_association" "private_1a" {
+  subnet_id      = aws_subnet.private_1a.id
+  route_table_id = aws_route_table.private_rt.id
+}
+
+resource "aws_route_table_association" "private_1b" {
+  subnet_id      = aws_subnet.private_1b.id
   route_table_id = aws_route_table.private_rt.id
 }
