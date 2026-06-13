@@ -5,13 +5,11 @@ pipeline {
     environment {
 
         AWS_REGION = 'us-east-1'
-        EKS_CLUSTER = 'prod-cluster'
-
+        EKS_CLUSTER = 'devops-cluster'
         ECR_REGISTRY = '217428065218.dkr.ecr.us-east-1.amazonaws.com'
-        ECR_REPO = 'python-application'
+        ECR_REPO = 'python-app'
 
-        // Git commit used as image version (best practice)
-        IMAGE_TAG = "${GIT_COMMIT}"
+       
     }
 
     stages {
@@ -23,18 +21,57 @@ pipeline {
             }
         }
 
-        stage('Build App') {
+        // Git commit used as image version (best practice)
+        IMAGE_TAG = "${GIT_COMMIT}"
+
+        // Running unit tests in a Docker container ensures that the tests are executed in a consistent environment, regardless of where the Jenkins agent is running. This helps to avoid issues related to differences in local development environments and ensures that the tests are run with the same dependencies and configurations as the production environment.
+        agent {
+            docker {
+                image 'python:3.11-slim'
+            }
+        }
+            // Installing dependencies and running unit tests in the same stage ensures that we are testing the exact code that will be analyzed by SonarQube in the next stage. This provides a more accurate assessment of code quality and helps to catch issues early in the pipeline before they are deployed to production.
             steps {
-                echo "Building application..."
+                sh '''
+                    pip install --no-cache-dir -r app/requirements.txt
+                    python -m unittest discover
+                '''
+            }
+        }
+        
+        // Running SonarQube scans after unit tests ensures that we are analyzing code that has already passed basic functionality checks, providing more meaningful insights into code quality and potential issues.
+        stage('SonarQube Scan') {
+
+            agent {
+                docker {
+                    image 'sonarsource/sonar-scanner-cli:latest'
+                }
+            }
+            // Using Jenkins credentials to securely pass the SonarQube token to the pipeline.
+            environment {
+                SONAR_TOKEN = credentials('SONAR_SECRET_TOKEN')
+            }
+
+            steps {
+
+                echo 'Running SonarQube scan...'
+                // The sonar-scanner command is configured to analyze the 'app' directory and uses the provided token for authentication with SonarQube.
+                sh '''
+                    sonar-scanner \
+                    -Dsonar.projectKey=python-app \
+                    -Dsonar.sources=app \
+                    -Dsonar.token=$SONAR_TOKEN
+                '''
             }
         }
 
+        // Building the Docker image after successful tests ensures that only verified code is packaged and deployed.
         stage('Build Docker Image') {
             steps {
                 sh """
                 echo "Building Docker image"
 
-                docker build -t $ECR_REPO:$IMAGE_TAG .
+                docker build -t $ECR_REPO:$IMAGE_TAG ./app
 
                 docker tag $ECR_REPO:$IMAGE_TAG \
                 $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
@@ -42,12 +79,7 @@ pipeline {
             }
         }
 
-        stage('Push to ECR') {
-
-            environment {
-                AWS_ACCESS_KEY_ID = credentials('aws-access-key')
-                AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
-            }
+        stage('Login to ECR') {
 
             steps {
                 sh """
@@ -55,7 +87,13 @@ pipeline {
 
                 aws ecr get-login-password --region $AWS_REGION | \
                 docker login --username AWS --password-stdin $ECR_REGISTRY
+                    """
+            }
+        }
 
+        stage('Push Image to ECR') {
+            steps {
+                sh """
                 echo "Pushing image"
 
                 docker push $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
@@ -64,11 +102,6 @@ pipeline {
         }
     
         stage('Deploy to EKS') {
-
-            environment {
-                AWS_ACCESS_KEY_ID = credentials('aws-access-key')
-                AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
-            }
 
             steps {
                 sh """
@@ -84,11 +117,20 @@ pipeline {
 
                 echo "Deploying new image"
 
-                kubectl set image deployment/myapp-deployment \
-                python-application=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
-
-                kubectl rollout status deployment/myapp-deployment
+                kubectl set image deployment/python-app \
+                python-app=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
                 """
+            }
+        }
+
+        stage('Verify Deployment') {
+
+            steps {
+
+                sh '''
+                    # Verifying the deployment by checking the rollout status of the deployment. This command will wait until the deployment is successfully rolled out, ensuring that the new image is running without issues.
+                    kubectl rollout status deployment/python-app
+                '''
             }
         }
     }
@@ -101,6 +143,16 @@ post {
         failure {
             echo "Deployment FAILED"
         }
-    }
+
+        // The always block ensures that the workspace is cleaned up after the pipeline execution, regardless of whether it succeeded or failed. This helps to maintain a clean environment for subsequent builds and prevents issues related to leftover files from previous runs.
+        always {
+            cleanWs()
+        
+        // The always block also includes a command to prune unused Docker images, which helps to free up disk space on the Jenkins agent. This is particularly important in CI/CD pipelines that build and push Docker images, as it prevents the accumulation of old and unused images that can consume significant storage over time.
+            sh '''
+                docker image prune -f || true
+            '''
+        }
+      }
 }
 
