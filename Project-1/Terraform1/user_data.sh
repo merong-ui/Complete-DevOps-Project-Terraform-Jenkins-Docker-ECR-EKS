@@ -1,24 +1,29 @@
 #!/bin/bash
+set -xe
 
-# Update system packages
-apt update -y
+# Update system
+dnf update -y
 
-# Install Docker
-apt install docker.io -y
+# Install Java (required for Jenkins)
+dnf install -y java-17-amazon-corretto
 
-# Start Docker service
-systemctl start docker
+# Install Docker (Amazon Linux way)
+dnf install -y docker
+
+# Start Docker
 systemctl enable docker
+systemctl start docker
 
-# Create Jenkins volume (persistent storage)
-docker volume create jenkins_home
+# Add ec2-user to docker group
+usermod -aG docker ec2-user
 
-# Run Jenkins container
-docker run -d \
-  -p 8080:8080 \
-  -p 50000:50000 \
-  -v jenkins_home:/var/jenkins_home \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  --name jenkins \
-  --restart unless-stopped \
-  jenkins/jenkins:lts
+# Jenkins repo
+wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
+rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+
+# Install Jenkins
+dnf install -y jenkins
+
+# Start Jenkins
+systemctl enable jenkins
+systemctl start jenkins
