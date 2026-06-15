@@ -15,6 +15,13 @@ resource "aws_instance" "jenkins" {
 
   ami           = data.aws_ami.amazon_linux.id
   instance_type = "t3.medium"
+  
+  # Configure the root block device with a larger volume size and use gp3 for better performance
+  root_block_device {
+    volume_size = 30
+    volume_type = "gp3"
+  }
+
 
   key_name = "devops-new-key"
 

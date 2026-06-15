@@ -25,42 +25,17 @@ pipeline {
         IMAGE_TAG = "${GIT_COMMIT}"
 
         // Running unit tests in a Docker container ensures that the tests are executed in a consistent environment, regardless of where the Jenkins agent is running. This helps to avoid issues related to differences in local development environments and ensures that the tests are run with the same dependencies and configurations as the production environment.
-        agent {
-            docker {
-                image 'python:3.11-slim'
-            }
+        stage('Unit Test') {
+            agent {
+                docker {
+                    image 'python:3.11-slim'
+                }
         }
             // Installing dependencies and running unit tests in the same stage ensures that we are testing the exact code that will be analyzed by SonarQube in the next stage. This provides a more accurate assessment of code quality and helps to catch issues early in the pipeline before they are deployed to production.
             steps {
                 sh '''
                     pip install --no-cache-dir -r app/requirements.txt
                     python -m unittest discover
-                '''
-            }
-        }
-        
-        // Running SonarQube scans after unit tests ensures that we are analyzing code that has already passed basic functionality checks, providing more meaningful insights into code quality and potential issues.
-        stage('SonarQube Scan') {
-
-            agent {
-                docker {
-                    image 'sonarsource/sonar-scanner-cli:latest'
-                }
-            }
-            // Using Jenkins credentials to securely pass the SonarQube token to the pipeline.
-            environment {
-                SONAR_TOKEN = credentials('SONAR_SECRET_TOKEN')
-            }
-
-            steps {
-
-                echo 'Running SonarQube scan...'
-                // The sonar-scanner command is configured to analyze the 'app' directory and uses the provided token for authentication with SonarQube.
-                sh '''
-                    sonar-scanner \
-                    -Dsonar.projectKey=python-app \
-                    -Dsonar.sources=app \
-                    -Dsonar.token=$SONAR_TOKEN
                 '''
             }
         }
