@@ -1,17 +1,26 @@
-# 🚀 DevOps CI/CD Pipeline Project (Terraform + Jenkins + EKS)
+## 🚀 CI/CD Pipeline (Jenkins)
 
-## 📌 Overview
+This project implements a fully automated CI/CD pipeline using Jenkins.
 
-This project demonstrates a complete DevOps CI/CD pipeline using:
+### Pipeline Flow
 
-- Terraform (Infrastructure as Code)
-- AWS (EC2, EKS, ECR, VPC, IAM)
-- Jenkins (CI/CD automation)
-- Docker (Containerization)
-- Kubernetes (EKS deployment)
-- SonarQube (Code quality scanning)
-- GitHub Webhooks (Automation trigger)
+1. Developer pushes code to GitHub
+2. Jenkins is triggered via webhook
+3. Source code is checked out
+4. Unit tests are executed using Python container
+5. Docker image is built
+6. Image is pushed to Amazon ECR
+7. Application is deployed to Amazon EKS
+8. Kubernetes performs rolling update
 
+### Tools Used
+
+- Terraform
+- Jenkins (CI/CD engine)
+- Docker (containerization)
+- Amazon ECR (image registry)
+- Amazon EKS (Kubernetes cluster)
+- AWS CLI (automation)
 ---
 
 ## 🏗️ Architecture
@@ -30,33 +39,18 @@ Terraform provisions:
 - NAT Gateway
 - EC2 Jenkins Server
 - IAM Roles
-- ECR Repository
 - EKS Cluster
-
-<img width="959" height="143" alt="image" src="https://github.com/user-attachments/assets/4388b24a-a1d6-4138-941f-2afff35c48d5" />
-
-<img width="1747" height="208" alt="image" src="https://github.com/user-attachments/assets/79533790-dcba-4421-9b22-2ac84365ed46" />
-
-<img width="1873" height="244" alt="image" src="https://github.com/user-attachments/assets/68d3f335-c100-464d-b133-d25a9baec15e" />
-
-<img width="1785" height="197" alt="image" src="https://github.com/user-attachments/assets/9604cbcf-c369-4e75-bdc8-450659aed1e8" />
+- ECR Repository
 
 
+- EC2 Jenkins Server and worker reservers:-
+<img width="931" height="286" alt="image" src="https://github.com/user-attachments/assets/cb672552-a78b-4766-ac26-94863ae30f66" />
 
+- EKS Cluster screenshot:-
+<img width="1434" height="211" alt="image" src="https://github.com/user-attachments/assets/c21ec1c9-3438-4b39-8336-a54fd78e2cff" />
 
----
-
-## 🚀 CI/CD Pipeline Flow
-
-1. Code pushed to GitHub
-2. GitHub triggers Jenkins webhook
-3. Jenkins pulls code
-4. Runs Unit Tests
-5. Runs SonarQube scan
-6. Builds Docker image
-7. Pushes image to ECR
-8. Deploys to EKS
-9. Verifies rollout
+- ECR Repository:-
+  <img width="1349" height="183" alt="image" src="https://github.com/user-attachments/assets/1397a797-d6aa-4a1a-902d-2e32f9f8133f" />
 
 ---
 
