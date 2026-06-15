@@ -4,7 +4,7 @@ module "eks" {
   version = "~> 20.0"
 
   cluster_name    = "devops-cluster"
-  cluster_version = "1.29"
+  cluster_version = "1.31"
 
   vpc_id     = aws_vpc.main.id
   subnet_ids = [

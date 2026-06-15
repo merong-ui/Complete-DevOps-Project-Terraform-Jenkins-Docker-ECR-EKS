@@ -16,6 +16,8 @@ resource "aws_instance" "jenkins" {
   ami           = data.aws_ami.amazon_linux.id
   instance_type = "t3.medium"
 
+  key_name = "devops-new-key"
+
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.sg.id]
 
