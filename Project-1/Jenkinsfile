@@ -23,6 +23,7 @@ pipeline {
         // STAGE 2: Execute code validation inside an isolated container sandbox
        stage('Unit Test') {
             steps {
+                dir('Project-1') {
                 // Run unit tests inside a temporary Python container to ensure code quality and correctness
                     sh '''
                         echo "Running unit tests inside a temporary Python container..."
@@ -33,7 +34,7 @@ pipeline {
                     '''
                 }
             }
-
+       }
         // STAGE 3: Assemble the local production Docker layer artifact
         stage('Build Docker Image') {
             steps {
