@@ -122,13 +122,13 @@ pipeline {
             echo "Executing global cleanup directives..."
             
             // Wipes out local temporary build project workspaces to prevent workspace storage footprint bloat
-            cleanWs()
+   /*         cleanWs()
             
             // Deletes detached and intermediate Docker images from the Jenkins EC2 host to save storage volume capacity
             sh '''
                 echo "Pruning unused container storage artifacts..."
                 docker image prune -f || true
-            '''
+      */      '''
         }
     }
 }
