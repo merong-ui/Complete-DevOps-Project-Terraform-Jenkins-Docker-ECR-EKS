@@ -86,10 +86,22 @@ Service:
 
 ---
 
-## 📦 How to Deploy
+## 📸 Proof of Work & Verification Placeholders
 
-### 1. Terraform
+1. Infrastructure Provisioning (Terraform Output)
+   
+   <img width="566" height="534" alt="Screenshot 2026-06-16 155740" src="https://github.com/user-attachments/assets/6e751d5d-84cd-4010-9a95-ed6c3654153f" />
 
-```bash
-terraform init
-terraform apply
+
+3. GitHub Webhook Communication
+   <img width="931" height="377" alt="image" src="https://github.com/user-attachments/assets/c39dbfa9-9bd9-47a7-9095-cfda472027a8" />
+
+4. Jenkins Multi-Stage Build View
+
+   
+5. Private Amazon ECR Repository
+   <img width="1696" height="192" alt="Screenshot 2026-06-16 170457" src="https://github.com/user-attachments/assets/0a81e0d9-d484-4534-a7b5-0cabb4418e6f" />
+
+6. Amazon EKS Active Resource Status
+   <img width="539" height="85" alt="Screenshot 2026-06-16 170204" src="https://github.com/user-attachments/assets/93dbe539-8e15-4c3b-bd25-d9bd5e9b1da4" />
+
