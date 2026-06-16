@@ -15,22 +15,24 @@ pipeline {
         // STAGE 1: Pull the latest source code revisions
         stage('Checkout') {
             steps {
-                // Clones the 'main' branch of your specified repository into the local Jenkins build workspace
-                git branch: 'main', url: 'https://github.com/merong-ui/devops-project.git'
+               // Dynamically tracks the exact repository and commit that fired the webhook
+                checkout scm
             }
         }
 
         // STAGE 2: Execute code validation inside an isolated container sandbox
-        stage('Unit Test') {
+       stage('Unit Test') {
             steps {
-                // Spins up a lightweight Python container, mounts the workspace path, installs project libraries, and runs tests.
-                // --rm ensures the container cleans itself up instantly upon exit.
-                sh '''
-                    docker run --rm -v "$(pwd)/app:/app" -w /app python:3.11-slim bash -c "
-                        pip install --no-cache-dir -r requirements.txt
-                        python -m unittest discover
-                    "
-                '''
+                ## Run unit tests inside a temporary Python container to ensure code quality and correctness
+                dir('Project-1') {
+                    sh '''
+                        echo "Running unit tests inside a temporary Python container..."
+                        docker run --rm -v "$(pwd):/app" -w /app python:3.9 bash -c "
+                            pip install -r requirements.txt &&
+                            pytest --maxfail=1 --disable-warnings -q
+                        "
+                    '''
+                }
             }
         }
 
