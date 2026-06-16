@@ -128,7 +128,8 @@ pipeline {
             sh '''
                 echo "Pruning unused container storage artifacts..."
                 docker image prune -f || true
-      */      '''
+           '''
+           */ 
         }
     }
 }
