@@ -24,7 +24,6 @@ pipeline {
        stage('Unit Test') {
             steps {
                 // Run unit tests inside a temporary Python container to ensure code quality and correctness
-                dir('Project-1') {
                     sh '''
                         echo "Running unit tests inside a temporary Python container..."
                         docker run --rm -v "$(pwd):/app" -w /app python:3.9 bash -c "
@@ -34,7 +33,6 @@ pipeline {
                     '''
                 }
             }
-        }
 
         // STAGE 3: Assemble the local production Docker layer artifact
         stage('Build Docker Image') {
