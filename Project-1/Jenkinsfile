@@ -26,9 +26,9 @@ pipeline {
                 // Spins up a lightweight Python container, mounts the workspace path, installs project libraries, and runs tests.
                 // --rm ensures the container cleans itself up instantly upon exit.
                 sh '''
-                    docker run --rm -v "$(pwd):/app" -w /app python:3.11-slim bash -c "
-                        pip install --no-cache-dir -r app/requirements.txt
-                        pytest app/
+                    docker run --rm -v "$(pwd)/app:/app" -w /app python:3.11-slim bash -c "
+                        pip install --no-cache-dir -r requirements.txt
+                        python -m unittest discover
                     "
                 '''
             }
