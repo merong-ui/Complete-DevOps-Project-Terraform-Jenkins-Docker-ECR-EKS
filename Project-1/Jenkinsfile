@@ -1,133 +1,122 @@
 pipeline {
-
+    // Execute this pipeline on any available Jenkins agent/node
     agent any
 
+    // Define environment variables accessible across all stages and shell scripts
     environment {
-
-        AWS_REGION = 'us-east-1'
-        EKS_CLUSTER = 'devops-cluster'
-        ECR_REGISTRY = '217428065218.dkr.ecr.us-east-1.amazonaws.com'
-        ECR_REPO = 'python-app'
-
-       
+        AWS_REGION   = 'us-east-1'                                          // Target AWS Region for infrastructure deployment
+        EKS_CLUSTER  = 'devops-cluster'                                     // Name of the target Amazon EKS Cluster
+        ECR_REGISTRY = '217428065218.dkr.ecr.us-east-1.amazonaws.com'       // Secure AWS ECR Private Registry Uniform Resource Identifier
+        ECR_REPO     = 'python-app'                                         // Targeted application repository name inside ECR
+        IMAGE_TAG    = "${GIT_COMMIT}"                                      // Unique alphanumeric Git SHA used for strict image immutability tracking
     }
 
     stages {
-
+        // STAGE 1: Pull the latest source code revisions
         stage('Checkout') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/merong-ui/devops-project.git'
+                // Clones the 'main' branch of your specified repository into the local Jenkins build workspace
+                git branch: 'main', url: 'https://github.com/merong-ui/devops-project.git'
             }
         }
 
-        // Git commit used as image version (best practice)
-        IMAGE_TAG = "${GIT_COMMIT}"
-
-        // Running unit tests in a Docker container ensures that the tests are executed in a consistent environment, regardless of where the Jenkins agent is running. This helps to avoid issues related to differences in local development environments and ensures that the tests are run with the same dependencies and configurations as the production environment.
+        // STAGE 2: Execute code validation inside an isolated container sandbox
         stage('Unit Test') {
-            agent {
-                docker {
-                    image 'python:3.11-slim'
-                }
-        }
-            // Installing dependencies and running unit tests in the same stage ensures that we are testing the exact code that will be analyzed by SonarQube in the next stage. This provides a more accurate assessment of code quality and helps to catch issues early in the pipeline before they are deployed to production.
             steps {
+                // Spins up a lightweight Python container, mounts the workspace path, installs project libraries, and runs tests.
+                // --rm ensures the container cleans itself up instantly upon exit.
                 sh '''
-                    pip install --no-cache-dir -r app/requirements.txt
-                    python -m unittest discover
+                    docker run --rm -v "$(pwd):/app" -w /app python:3.11-slim bash -c "
+                        pip install --no-cache-dir -r app/requirements.txt
+                        pytest app/
+                    "
                 '''
             }
         }
 
-        // Building the Docker image after successful tests ensures that only verified code is packaged and deployed.
+        // STAGE 3: Assemble the local production Docker layer artifact
         stage('Build Docker Image') {
             steps {
                 sh """
-                echo "Building Docker image"
-
-                docker build -t $ECR_REPO:$IMAGE_TAG ./app
-
-                docker tag $ECR_REPO:$IMAGE_TAG \
-                $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
+                    echo "Building local Docker image artifact..."
+                    docker build -t $ECR_REPO:$IMAGE_TAG ./app
+                    
+                    echo "Tagging image with complete ECR registry URI mapping..."
+                    docker tag $ECR_REPO:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
                 """
             }
         }
 
+        // STAGE 4: Authenticate Jenkins with the AWS Cloud Registry
         stage('Login to ECR') {
-
             steps {
                 sh """
-                echo "Logging into ECR"
-
-                aws ecr get-login-password --region $AWS_REGION | \
-                docker login --username AWS --password-stdin $ECR_REGISTRY
-                    """
+                    echo "Retrieving AWS ECR token handshake..."
+                    aws ecr get-login-password --region $AWS_REGION | \
+                    docker login --username AWS --password-stdin $ECR_REGISTRY
+                """
             }
         }
 
+        // STAGE 5: Dispatch the verified image to the secure private catalog
         stage('Push Image to ECR') {
             steps {
                 sh """
-                echo "Pushing image"
-
-                docker push $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
+                    echo "Shipping compiled image version to remote ECR registry..."
+                    docker push $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
                 """
             }
         }
     
+        // STAGE 6: Initiate the Kubernetes deployment loop configuration update
         stage('Deploy to EKS') {
-
             steps {
                 sh """
-                echo "Updating kubeconfig"
+                    echo "Updating local server kubeconfig file authorization profiles..."
+                    aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER
 
-                aws eks update-kubeconfig \
-                    --region $AWS_REGION \
-                    --name $EKS_CLUSTER
+                    echo "Verifying EKS Cluster nodes communication channel connectivity..."
+                    kubectl get nodes
 
-                echo "Checking cluster"
-
-                kubectl get nodes
-
-                echo "Deploying new image"
-
-                kubectl set image deployment/python-app \
-                python-app=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
+                    echo "Injecting newly pushed container image tag version into cluster deployment..."
+                    kubectl set image deployment/python-app python-app=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
                 """
             }
         }
 
+        // STAGE 7: Validate deployment success parameters
         stage('Verify Deployment') {
-
             steps {
-
                 sh '''
-                    # Verifying the deployment by checking the rollout status of the deployment. This command will wait until the deployment is successfully rolled out, ensuring that the new image is running without issues.
+                    echo "Monitoring EKS cluster rolling update status..."
+                    # Blocks pipeline progression until the old pods terminate and new pods pass health checks
                     kubectl rollout status deployment/python-app
                 '''
             }
         }
     }
 
-
-post {
+    // Post-execution definitions handling notifications and general housecleaning routines
+    post {
         success {
-            echo "Deployment SUCCESS"
+            // Fires if every step completes without an exit error code
+            echo "Pipeline run completed: Deployment SUCCESS"
         }
         failure {
-            echo "Deployment FAILED"
+            // Fires if any single step fails, tracking pipeline breakdowns immediately
+            echo "Pipeline run aborted: Deployment FAILED"
         }
-
-        // The always block ensures that the workspace is cleaned up after the pipeline execution, regardless of whether it succeeded or failed. This helps to maintain a clean environment for subsequent builds and prevents issues related to leftover files from previous runs.
         always {
+            echo "Executing global cleanup directives..."
+            
+            // Wipes out local temporary build project workspaces to prevent workspace storage footprint bloat
             cleanWs()
-        
-        // The always block also includes a command to prune unused Docker images, which helps to free up disk space on the Jenkins agent. This is particularly important in CI/CD pipelines that build and push Docker images, as it prevents the accumulation of old and unused images that can consume significant storage over time.
+            
+            // Deletes detached and intermediate Docker images from the Jenkins EC2 host to save storage volume capacity
             sh '''
+                echo "Pruning unused container storage artifacts..."
                 docker image prune -f || true
             '''
         }
-      }
+    }
 }
-
