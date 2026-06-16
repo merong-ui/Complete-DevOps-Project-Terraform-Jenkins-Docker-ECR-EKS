@@ -8,6 +8,7 @@ resource "aws_eks_access_entry" "jenkins" {
 
 }
 
+# Associate the Jenkins IAM role with the AmazonEKSClusterAdminPolicy to grant it administrative access to the EKS cluster
 resource "aws_eks_access_policy_association" "jenkins_admin" {
 
   cluster_name = module.eks.cluster_name
