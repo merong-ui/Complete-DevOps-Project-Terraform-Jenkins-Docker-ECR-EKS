@@ -26,7 +26,7 @@ pipeline {
                 dir('Project-1') {
                     sh '''
                         echo "Building temporary test environment..."
-                        # Create an inline dynamic test image containing your exact files
+                        # Tell Docker to read a dynamic Dockerfile from standard input
                         docker build -t local-test-env -f - . <<EOF
 FROM python:3.9
 WORKDIR /app
@@ -36,7 +36,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 EOF
 
                         echo "Running unit test suite..."
-                        # Run the containerized tests using the context we copied inside
+                        # Run the test execution inside the transient container matrix
                         docker run --rm local-test-env bash -c "
                             if command -v pytest > /dev/null; then
                                 pytest --maxfail=1 --disable-warnings -q
@@ -45,7 +45,7 @@ EOF
                             fi
                         "
                         
-                        # Clean up local test environment artifact
+                        echo "Cleaning up test build cache..."
                         docker rmi local-test-env
                     '''
                 }
@@ -54,14 +54,16 @@ EOF
         // STAGE 3: Assemble the local production Docker layer artifact
         stage('Build Docker Image') {
             steps {
-                sh """
-                    echo "Building local Docker image artifact..."
-                    docker build -t $ECR_REPO:$IMAGE_TAG ./app
-                    
-                    echo "Tagging image with complete ECR registry URI mapping..."
-                    docker tag $ECR_REPO:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
-                """
+                dir('Project-1') {
+                    sh """
+                        echo "Building local Docker image artifact..."
+                        docker build -t $ECR_REPO:$IMAGE_TAG ./app
+                        
+                        echo "Tagging image with complete ECR registry URI mapping..."
+                        docker tag $ECR_REPO:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
+                    """
             }
+        }
         }
 
         // STAGE 4: Authenticate Jenkins with the AWS Cloud Registry
