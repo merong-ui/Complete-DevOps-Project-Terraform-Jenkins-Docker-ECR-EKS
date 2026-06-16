@@ -51,14 +51,13 @@ resource "aws_iam_policy" "jenkins_eks_policy" {
     ]
   })
 }
-
+# Attach the custom EKS access policy to the Jenkins role to allow it to interact with EKS cluster
 resource "aws_iam_role_policy_attachment" "eks_access" {
 
-  role       = aws_iam_role.jenkins_role.name
+  role = aws_iam_role.jenkins_role.name
 
-  policy_arn = aws_iam_policy.jenkins_eks_policy.arn
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 }
-
 
 # Create an instance profile for Jenkins and associate it with the IAM role
 resource "aws_iam_instance_profile" "jenkins_profile" {
