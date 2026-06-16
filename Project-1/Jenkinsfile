@@ -52,18 +52,19 @@ EOF
             }
         }
         // STAGE 3: Assemble the local production Docker layer artifact
-        stage('Build Docker Image') {
+       stage('Build Docker Image') {
             steps {
                 dir('Project-1') {
-                    sh """
+                    sh '''
                         echo "Building local Docker image artifact..."
-                        docker build -t $ECR_REPO:$IMAGE_TAG ./app
+                        # Changed the end from ./app to a single dot (.)
+                        docker build -t ${ECR_REPO}:${IMAGE_TAG} .
                         
                         echo "Tagging image with complete ECR registry URI mapping..."
-                        docker tag $ECR_REPO:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
-                    """
+                        docker tag ${ECR_REPO}:${IMAGE_TAG} ${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}
+                    '''
+                }
             }
-        }
         }
 
         // STAGE 4: Authenticate Jenkins with the AWS Cloud Registry
