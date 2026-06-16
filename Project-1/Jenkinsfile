@@ -23,18 +23,29 @@ pipeline {
         // STAGE 2: Execute code validation inside an isolated container sandbox
        stage('Unit Test') {
             steps {
-                dir('Project-1') {
-                // Run unit tests inside a temporary Python container to ensure code quality and correctness
-                    sh '''
-                        echo "Running unit tests inside a temporary Python container..."
-                        docker run --rm -v "$(pwd):/app" -w /app python:3.9 bash -c "
-                            pip install -r requirements.txt &&
-                            pytest --maxfail=1 --disable-warnings -q
-                        "
-                    '''
-                }
+                sh '''
+                    echo "Checking filesystem..."
+                    if [ -f "requirements.txt" ]; then
+                        echo "Found requirements.txt at the current root."
+                        TARGET_DIR="$(pwd)"
+                    elif [ -f "Project-1/requirements.txt" ]; then
+                        echo "Found requirements.txt inside Project-1."
+                        TARGET_DIR="$(pwd)/Project-1"
+                    else
+                        echo "Searching globally for requirements.txt..."
+                        REQ_PATH=$(find . -name "requirements.txt" -print -quit)
+                        TARGET_DIR=$(dirname "$(realpath "$REQ_PATH")")
+                    fi
+                    
+                    echo "Target workspace directory is: $TARGET_DIR"
+                    
+                    docker run --rm -v "$TARGET_DIR:/app" -w /app python:3.9 bash -c "
+                        pip install -r requirements.txt &&
+                        pytest --maxfail=1 --disable-warnings -q
+                    "
+                '''
             }
-       }
+        }
         // STAGE 3: Assemble the local production Docker layer artifact
         stage('Build Docker Image') {
             steps {
