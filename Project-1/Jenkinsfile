@@ -22,50 +22,49 @@ pipeline {
 
         // STAGE 2: Execute code validation inside an isolated container sandbox
        stage('Unit Test') {
-            steps {
-                dir('Project-1') {
-                    sh '''
-                        echo "Building temporary test environment..."
-                        # Tell Docker to read a dynamic Dockerfile from standard input
-                        docker build -t local-test-env -f - . <<EOF
-FROM python:3.9
-WORKDIR /app
-COPY requirements.txt .
-COPY app.py .
-RUN pip install --no-cache-dir -r requirements.txt
-EOF
 
-                        echo "Running unit test suite..."
-                        # Run the test execution inside the transient container matrix
-                        docker run --rm local-test-env bash -c "
-                            if command -v pytest > /dev/null; then
-                                pytest --maxfail=1 --disable-warnings -q
-                            else
-                                python -m unittest discover -s . -p '*.py'
-                            fi
-                        "
-                        
-                        echo "Cleaning up test build cache..."
-                        docker rmi local-test-env
-                    '''
+            agent {
+
+                docker {
+                    image 'python:3.11-slim'
                 }
             }
+
+            steps {
+
+                sh '''
+                    echo "Installing dependencies"
+
+                    pip install -r app/requirements.txt
+
+                    echo "Running unit tests"
+
+                    python -m unittest discover
+                '''
+            }
         }
+
         // STAGE 3: Assemble the local production Docker layer artifact
        stage('Build Docker Image') {
+
             steps {
-                dir('Project-1') {
-                    sh '''
-                        echo "Building local Docker image artifact..."
-                        # Changed the end from ./app to a single dot (.)
-                        docker build -t ${ECR_REPO}:${IMAGE_TAG} .
-                        
-                        echo "Tagging image with complete ECR registry URI mapping..."
-                        docker tag ${ECR_REPO}:${IMAGE_TAG} ${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}
-                    '''
-                }
+
+                sh """
+                    echo "Building Docker Image"
+
+                    docker build \
+                    -t ${ECR_REPO}:${IMAGE_TAG} \
+                    ./app
+
+                    echo "Tagging Image for ECR"
+
+                    docker tag \
+                    ${ECR_REPO}:${IMAGE_TAG} \
+                    ${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}
+                """
             }
         }
+
 
         // STAGE 4: Authenticate Jenkins with the AWS Cloud Registry
         stage('Login to ECR') {
@@ -91,21 +90,24 @@ EOF
         // STAGE 6: Initiate the Kubernetes deployment loop configuration update
        // STAGE 6: Initiate the Kubernetes deployment loop configuration update
         stage('Deploy to EKS') {
-            steps {
-                dir('Project-1') {
-                    sh """
-                        echo "Configuring cluster authentication context..."
-                        aws eks update-kubeconfig --region ${AWS_REGION} --name ${EKS_CLUSTER}
+             steps {
 
-                        echo "Applying base Kubernetes manifest layouts..."
-                        kubectl apply -f deployment.yaml
-                        kubectl apply -f service.yaml
+                sh """
+                    echo "Updating kubeconfig"
 
-                        echo "Injecting newly pushed container image tag version into cluster deployment..."
-                        # THIS SCRIPT ROW IS CRITICAL: It updates EKS from ':latest' to your specific Git commit tag
-                        kubectl set image deployment/python-app python-app=${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}
-                    """
-                }
+                    aws eks update-kubeconfig \
+                        --region ${AWS_REGION} \
+                        --name ${EKS_CLUSTER}
+
+                    echo "Verifying Cluster"
+
+                    kubectl get nodes
+
+                    echo "Updating Deployment"
+
+                    kubectl set image deployment/python-app \
+                    python-app=${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}
+                """
             }
         }
         // STAGE 7: Validate deployment success parameters
@@ -135,14 +137,14 @@ EOF
             echo "Executing global cleanup directives..."
             
             // Wipes out local temporary build project workspaces to prevent workspace storage footprint bloat
-   /*         cleanWs()
+            cleanWs()
             
             // Deletes detached and intermediate Docker images from the Jenkins EC2 host to save storage volume capacity
             sh '''
                 echo "Pruning unused container storage artifacts..."
                 docker image prune -f || true
            '''
-           */ 
+           
         }
     }
 }
