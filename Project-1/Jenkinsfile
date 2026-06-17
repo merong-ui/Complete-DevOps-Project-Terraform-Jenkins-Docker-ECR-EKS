@@ -89,21 +89,21 @@ EOF
         }
     
         // STAGE 6: Initiate the Kubernetes deployment loop configuration update
-        stage('Deploy to EKS') {
-            steps {
-                sh """
-                    echo "Updating local server kubeconfig file authorization profiles..."
-                    aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER
+       stage('Deploy to EKS') {
+    steps {
+        // 1. Tell Jenkins to step inside the folder where the files actually live
+        dir('Project-1') {
+            sh """
+                echo "Current directory contents:"
+                ls -la  # This will now successfully print app.py, deployment.yaml, etc.
 
-                    echo "Verifying EKS Cluster nodes communication channel connectivity..."
-                    kubectl get nodes
-
-                    echo "Injecting newly pushed container image tag version into cluster deployment..."
-                    kubectl set image deployment/python-app python-app=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
-                """
-            }
+                # 2. Run your cloud tools natively now that Jenkins has them installed
+                kubectl apply -f deployment.yaml
+                kubectl apply -f service.yaml
+            """
         }
-
+    }
+}
         // STAGE 7: Validate deployment success parameters
         stage('Verify Deployment') {
             steps {
