@@ -158,11 +158,6 @@ Service:
   <img width="1534" height="311" alt="image" src="https://github.com/user-attachments/assets/c21ec1c9-3438-4b39-8336-a54fd78e2cff" />
 
 
-  - Amazon EKS Active Resource Status:
-    
-  <img width="539" height="85" alt="Screenshot 2026-06-16 170204" src="https://github.com/user-attachments/assets/93dbe539-8e15-4c3b-bd25-d9bd5e9b1da4" />
-    
-
     
 ## 2. Amazon ECR Repository
 
