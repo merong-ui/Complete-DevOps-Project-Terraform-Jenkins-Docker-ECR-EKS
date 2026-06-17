@@ -2,7 +2,7 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 20.0"
 
-  cluster_name    = "devops-cluster"
+  cluster_name    = "<EKS_CLUSTER_NAME>"
   cluster_version = "1.31"
 
   vpc_id = aws_vpc.main.id
@@ -17,7 +17,7 @@ module "eks" {
 
   access_entries = {
     admin = {
-      principal_arn = "arn:aws:iam::217428065218:user/merryadmin"
+      principal_arn = "arn:aws:iam::<ADMIN_IAM_ARN>:user/<user_name>"
 
       policy_associations = {
         admin = {
