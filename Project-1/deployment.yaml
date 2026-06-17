@@ -20,7 +20,7 @@ spec:
       containers:
       - name: python-app
         # The Jenkins pipeline will push the built image here.
-        image: 217428065218.dkr.ecr.us-east-1.amazonaws.com/python-app:latest
+        image: <AWS_ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/python-app:latest
 
         ports:
         - containerPort: 5000 #Port exposed by the application inside the container.
