@@ -2,7 +2,7 @@ resource "aws_eks_access_entry" "jenkins" {
 
   cluster_name = module.eks.cluster_name
 
-  principal_arn = aws_iam_role.jenkins_role.arn
+  principal_arn = <ADMIN_IAM_ARN>
 
   type = "STANDARD"
 
@@ -13,7 +13,7 @@ resource "aws_eks_access_policy_association" "jenkins_admin" {
 
   cluster_name = module.eks.cluster_name
 
-  principal_arn = aws_iam_role.jenkins_role.arn
+  principal_arn = <ADMIN_IAM_ARN>
 
   policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
 
