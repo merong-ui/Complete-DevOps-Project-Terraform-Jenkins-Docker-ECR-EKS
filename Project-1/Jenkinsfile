@@ -1,27 +1,35 @@
 pipeline {
+
     // Execute this pipeline on any available Jenkins agent/node
     agent any
 
-    // Define environment variables accessible across all stages and shell scripts
+    // Global environment variables
     environment {
-        AWS_REGION   = 'us-east-1'                                          // Target AWS Region for infrastructure deployment
-        EKS_CLUSTER  = 'devops-cluster'                                     // Name of the target Amazon EKS Cluster
-        ECR_REGISTRY = '217428065218.dkr.ecr.us-east-1.amazonaws.com'       // Secure AWS ECR Private Registry Uniform Resource Identifier
-        ECR_REPO     = 'python-app'                                         // Targeted application repository name inside ECR
-        IMAGE_TAG    = "${GIT_COMMIT}"                                      // Unique alphanumeric Git SHA used for strict image immutability tracking
+
+        AWS_REGION   = '<AWS_REGION>'
+        EKS_CLUSTER  = '<EKS_CLUSTER_NAME>'
+
+        ECR_REGISTRY = '<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com'
+        ECR_REPO     = '<ECR_REPOSITORY_NAME>'
+
+        // Git commit SHA used as immutable image tag
+        IMAGE_TAG    = "${GIT_COMMIT}"
     }
 
     stages {
-        // STAGE 1: Pull the latest source code revisions
+
+        // STAGE 1: Pull latest source code
         stage('Checkout') {
+
             steps {
-               // Dynamically tracks the exact repository and commit that fired the webhook
+
+                // Uses Jenkins SCM configuration
                 checkout scm
             }
         }
 
-        // STAGE 2: Execute code validation inside an isolated container sandbox
-       stage('Unit Test') {
+        // STAGE 2: Run unit tests inside a clean Python container
+        stage('Unit Test') {
 
             agent {
 
@@ -44,8 +52,8 @@ pipeline {
             }
         }
 
-        // STAGE 3: Assemble the local production Docker layer artifact
-       stage('Build Docker Image') {
+        // STAGE 3: Build Docker image
+        stage('Build Docker Image') {
 
             steps {
 
@@ -65,32 +73,41 @@ pipeline {
             }
         }
 
-
-        // STAGE 4: Authenticate Jenkins with the AWS Cloud Registry
+        // STAGE 4: Authenticate to Amazon ECR
         stage('Login to ECR') {
+
             steps {
+
                 sh """
-                    echo "Retrieving AWS ECR token handshake..."
-                    aws ecr get-login-password --region $AWS_REGION | \
-                    docker login --username AWS --password-stdin $ECR_REGISTRY
+                    echo "Logging into Amazon ECR"
+
+                    aws ecr get-login-password \
+                    --region ${AWS_REGION} | \
+                    docker login \
+                    --username AWS \
+                    --password-stdin ${ECR_REGISTRY}
                 """
             }
         }
 
-        // STAGE 5: Dispatch the verified image to the secure private catalog
+        // STAGE 5: Push image to Amazon ECR
         stage('Push Image to ECR') {
+
             steps {
+
                 sh """
-                    echo "Shipping compiled image version to remote ECR registry..."
-                    docker push $ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
+                    echo "Pushing Docker image"
+
+                    docker push \
+                    ${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}
                 """
             }
         }
-    
-        // STAGE 6: Initiate the Kubernetes deployment loop configuration update
-       // STAGE 6: Initiate the Kubernetes deployment loop configuration update
+
+        // STAGE 6: Deploy new image to Amazon EKS
         stage('Deploy to EKS') {
-             steps {
+
+            steps {
 
                 sh """
                     echo "Updating kubeconfig"
@@ -99,52 +116,56 @@ pipeline {
                         --region ${AWS_REGION} \
                         --name ${EKS_CLUSTER}
 
-                    echo "Verifying Cluster"
+                    echo "Verifying Cluster Connectivity"
 
                     kubectl get nodes
 
-                    echo "Updating Deployment"
+                    echo "Updating Kubernetes Deployment"
 
                     kubectl set image deployment/python-app \
                     python-app=${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}
                 """
             }
         }
-        // STAGE 7: Validate deployment success parameters
+
+        // STAGE 7: Verify deployment rollout
         stage('Verify Deployment') {
-          
+
             steps {
+
                 sh '''
-                    echo "Monitoring EKS cluster rolling update status..."
-                    # Blocks pipeline progression until the old pods terminate and new pods pass health checks
+                    echo "Waiting for deployment rollout"
+
                     kubectl rollout status deployment/python-app
                 '''
             }
         }
     }
 
-    // Post-execution definitions handling notifications and general housecleaning routines
+    // Post-build actions
     post {
+
         success {
-            // Fires if every step completes without an exit error code
-            echo "Pipeline run completed: Deployment SUCCESS"
+
+            echo "Deployment SUCCESS"
         }
+
         failure {
-            // Fires if any single step fails, tracking pipeline breakdowns immediately
-            echo "Pipeline run aborted: Deployment FAILED"
+
+            echo "Deployment FAILED"
         }
+
         always {
-            echo "Executing global cleanup directives..."
-            
-            // Wipes out local temporary build project workspaces to prevent workspace storage footprint bloat
+
+            echo "Cleaning workspace"
+
             cleanWs()
-            
-            // Deletes detached and intermediate Docker images from the Jenkins EC2 host to save storage volume capacity
+
             sh '''
-                echo "Pruning unused container storage artifacts..."
+                echo "Removing unused Docker images"
+
                 docker image prune -f || true
-           '''
-           
+            '''
         }
     }
 }
