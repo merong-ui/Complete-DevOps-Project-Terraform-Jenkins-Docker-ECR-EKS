@@ -20,4 +20,7 @@ terraform.exe
 terraform-provider-*
 
 # Terraform lock file
-!.terraform.lock.hcl
+.terraform.lock.hcl
+
+plan.txt
+*.plan
