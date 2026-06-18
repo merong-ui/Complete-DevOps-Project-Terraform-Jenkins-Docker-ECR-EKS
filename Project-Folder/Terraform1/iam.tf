@@ -3,7 +3,7 @@
 resource "aws_iam_role" "jenkins_role" {
   name = "jenkins-role"
   
-# The assume role policy allows EC2 instances to assume this role, granting them the permissions defined in the attached policies.
+# The assume role policy defines who is allowed to use (assume) the IAM role, and in this case it allows EC2 instances to assume the role and receive the permissions attached to it.
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
