@@ -20,18 +20,6 @@ resource "aws_subnet" "public" {
   }
 }
 
-# NAT Gateway (for private subnet outbound internet access)
-resource "aws_nat_gateway" "nat" {
-  allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public.id
-
-  tags = {
-    Name = "devops-nat-gateway"
-  }
-
-  depends_on = [aws_internet_gateway.gw]
-}
-
 # Create an Internet Gateway (The "Door" at my private network to the internet)
 resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.main.id
@@ -47,10 +35,22 @@ resource "aws_route_table" "rt" {
   }
 }
 
-# This connects Subnet to Route Table
+# This Connects public subnet → public route table
 resource "aws_route_table_association" "public_assoc" {
   subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.rt.id
+}
+
+# NAT Gateway (for private subnet outbound internet access)
+resource "aws_nat_gateway" "nat" {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.public.id
+
+  tags = {
+    Name = "devops-nat-gateway"
+  }
+
+  depends_on = [aws_internet_gateway.gw]
 }
 
 # Elastic IP for NAT Gateway
@@ -73,8 +73,8 @@ resource "aws_subnet" "private_1a" {
     Name = "private-1a"
 
     # REQUIRED for EKS
-    "kubernetes.io/cluster/devops-cluster" = "shared"
-    "kubernetes.io/role/internal-elb"      = "1"
+    "kubernetes.io/cluster/devops-cluster" = "shared"   # "This subnet belongs to the EKS cluster named devops-cluster."
+    "kubernetes.io/role/internal-elb"      = "1"        # Tells EKS- use this subnet for INTERNAL load balancers.
   }
 }
 
@@ -87,8 +87,8 @@ resource "aws_subnet" "private_1b" {
     Name = "private-1b"
 
     # REQUIRED for EKS
-    "kubernetes.io/cluster/devops-cluster" = "shared"
-    "kubernetes.io/role/internal-elb"      = "1"
+    "kubernetes.io/cluster/devops-cluster" = "shared"    # "This subnet belongs to the EKS cluster named devops-cluster."
+    "kubernetes.io/role/internal-elb"      = "1"         # Tells EKS- use this subnet for INTERNAL load balancers.
   }
 }
 
