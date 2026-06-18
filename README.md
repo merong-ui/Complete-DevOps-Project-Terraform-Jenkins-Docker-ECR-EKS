@@ -212,5 +212,11 @@ Key areas covered include:
 - Production-Style Network Architecture
    
    
-     
+# Author
+
+**Meron Gebrehiwot**
+
+AWS Cloud Engineer | DevOps Engineer
+
+This project was built to demonstrate production-inspired cloud infrastructure automation, CI/CD implementation, container orchestration, and modern DevOps practices using AWS.
  
