@@ -14,6 +14,9 @@ pipeline {
 
         // Git commit SHA used as immutable image tag
         IMAGE_TAG    = "${GIT_COMMIT}"
+
+        // Cache Trivy database definitions locally to keep execution fast
+        TRIVY_CACHE_DIR = "${WORKSPACE}/.trivycache"
     }
 
     stages {
@@ -69,6 +72,28 @@ pipeline {
                     docker tag \
                     ${ECR_REPO}:${IMAGE_TAG} \
                     ${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}
+                """
+            }
+        }
+
+        // ADDED STAGE: Scan the local image before pushing( to prevents vulnerable code from slipping into production.)
+        stage('Security Scan (Trivy)') {
+
+            steps {
+                echo "Scanning image for HIGH and CRITICAL vulnerabilities..."
+                
+                // Runs Trivy inside a lightweight Docker container
+                // --exit-code 1 ensures Jenkins fails the build if vulnerabilities are found
+                // --ignore-unfixed bypasses CVEs that do not have an official vendor patch yet
+                sh """
+                    docker run --rm \
+                        -v /var/run/docker.sock:/var/run/docker.sock \
+                        -v ${TRIVY_CACHE_DIR}:/root/.cache \
+                        aquasec/trivy:latest image \
+                        --exit-code 1 \
+                        --severity HIGH,CRITICAL \
+                        --ignore-unfixed \
+                        ${ECR_REPO}:${IMAGE_TAG}
                 """
             }
         }
